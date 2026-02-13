@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  video-bot:
+    build: .
+    container_name: telegram-video-bot
+    restart: always
+    environment:
+      - BOT_TOKEN=CHANGE_ME
+      - RATE_LIMIT_SECONDS=10
