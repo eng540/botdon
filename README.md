@@ -1,4 +1,4 @@
-# Telegram Video Downloader Bot
+# Telegram Video Downloader Bot (aiogram 3.x)
 
 ## التشغيل عبر Docker
 1. ضع توكن البوت في docker-compose.yml
