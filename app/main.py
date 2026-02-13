@@ -56,5 +56,8 @@ async def handle_message(message: Message):
 if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.INFO)
-    from aiogram import executor
-    executor.start_polling(dp, skip_updates=True)
+
+    async def main():
+        await dp.start_polling(bot, skip_updates=True)
+
+    asyncio.run(main())
