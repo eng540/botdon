@@ -1,8 +1,7 @@
 import os
 import asyncio
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import FSInputFile
-from aiogram.utils import executor
+from aiogram import Bot, Dispatcher
+from aiogram.types import Message, InputFile
 from downloader import download_video
 from config import RATE_LIMIT_SECONDS
 
@@ -11,7 +10,7 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
 
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
 user_last_request = {}
 
@@ -28,8 +27,8 @@ def rate_limited(user_id: int) -> bool:
     user_last_request[user_id] = now
     return False
 
-@dp.message_handler()
-async def handle_message(message: types.Message):
+@dp.message()
+async def handle_message(message: Message):
     user_id = message.from_user.id
     text = (message.text or "").strip()
 
@@ -45,7 +44,7 @@ async def handle_message(message: types.Message):
 
     try:
         path = await asyncio.to_thread(download_video, text)
-        video = FSInputFile(path)
+        video = InputFile(path)
         await message.answer_video(video)
         try:
             os.remove(path)
@@ -55,4 +54,7 @@ async def handle_message(message: types.Message):
         await message.reply("فشل التحميل ❌")
 
 if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    from aiogram import executor
     executor.start_polling(dp, skip_updates=True)
