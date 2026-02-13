@@ -15,10 +15,23 @@ dp = Dispatcher()
 user_last_request = {}
 
 def is_video_url(text: str) -> bool:
-    domains = ["instagram.com", "tiktok.com", "facebook.com"]
+    """
+    تحقق إذا كانت الرسالة تحتوي رابط فيديو من:
+    Instagram, TikTok, Facebook, YouTube
+    """
+    domains = [
+        "instagram.com",
+        "tiktok.com",
+        "facebook.com",
+        "youtube.com",
+        "youtu.be"
+    ]
     return any(d in text for d in domains)
 
 def rate_limited(user_id: int) -> bool:
+    """
+    حماية من الإفراط في الطلبات لكل مستخدم
+    """
     import time
     now = time.time()
     last = user_last_request.get(user_id, 0)
@@ -37,7 +50,7 @@ async def handle_message(message: Message):
         return
 
     if not is_video_url(text):
-        await message.reply("أرسل رابط فيديو من Instagram أو TikTok أو Facebook.")
+        await message.reply("أرسل رابط فيديو من Instagram أو TikTok أو Facebook أو YouTube.")
         return
 
     await message.reply("جاري التحميل ⏳")
