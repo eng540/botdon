@@ -1,47 +1,45 @@
 import yt_dlp
-import os
 import uuid
+import os
+import time
 
-DOWNLOAD_DIR = "/tmp/videos"
+DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-def download_video(url: str) -> str:
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
+def download_video(url: str):
     filename = f"{uuid.uuid4()}.mp4"
-    filepath = os.path.join(DOWNLOAD_DIR, filename)
+    output = os.path.join(DOWNLOAD_DIR, filename)
 
     ydl_opts = {
-        "outtmpl": filepath,
-        "format": "bestvideo+bestaudio/best",
-        "merge_output_format": "mp4",
-        "quiet": True,
-        "no_warnings": True,
-
-        # استقرار التحميل
-        "retries": 5,
-        "fragment_retries": 5,
-        "socket_timeout": 30,
-
-        # تجاوز قيود بعض المواقع
+        "outtmpl": output,
+        "format": "best",
         "noplaylist": True,
-        "geo_bypass": True,
+        "quiet": True,
+        "retries": 10,
+        "fragment_retries": 10,
+        "socket_timeout": 60,
         "nocheckcertificate": True,
+        "ignoreerrors": True,
 
-        # دعم Facebook وInstagram الخاص
-        "cookiefile": "cookies.txt" if os.path.exists("cookies.txt") else None,
+        # بصمة متصفح حقيقي لمنع 403
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
 
-        # تحسين التوافق مع Railway
-        "concurrent_fragment_downloads": 3,
+        # تجنب مشاكل IPv6 في السحابة
+        "source_address": "0.0.0.0",
     }
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+    for attempt in range(3):
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
 
-        if not os.path.exists(filepath):
-            raise Exception("Download failed")
+            if os.path.exists(output):
+                return output
 
-        return filepath
+        except Exception:
+            time.sleep(5)
 
-    except Exception as e:
-        raise Exception(f"DOWNLOAD_ERROR: {str(e)}")
+    return None

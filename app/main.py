@@ -1,76 +1,43 @@
 import os
 import asyncio
-from aiogram import Bot, Dispatcher
-from aiogram.types import Message, InputFile
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import Message
 from downloader import download_video
-from config import RATE_LIMIT_SECONDS
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN is not set")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-user_last_request = {}
-
-def is_video_url(text: str) -> bool:
-    """
-    تحقق إذا كانت الرسالة تحتوي رابط فيديو من:
-    Instagram, TikTok, Facebook, YouTube
-    """
-    domains = [
-        "instagram.com",
-        "tiktok.com",
-        "facebook.com",
-        "youtube.com",
-        "youtu.be"
-    ]
-    return any(d in text for d in domains)
-
-def rate_limited(user_id: int) -> bool:
-    """
-    حماية من الإفراط في الطلبات لكل مستخدم
-    """
-    import time
-    now = time.time()
-    last = user_last_request.get(user_id, 0)
-    if now - last < RATE_LIMIT_SECONDS:
-        return True
-    user_last_request[user_id] = now
-    return False
-
 @dp.message()
 async def handle_message(message: Message):
-    user_id = message.from_user.id
-    text = (message.text or "").strip()
-
-    if rate_limited(user_id):
-        await message.reply("تم إرسال طلب مؤخرًا… انتظر قليلًا ⏱")
-        return
-
-    if not is_video_url(text):
-        await message.reply("أرسل رابط فيديو من Instagram أو TikTok أو Facebook أو YouTube.")
-        return
+    url = message.text.strip()
 
     await message.reply("جاري التحميل ⏳")
 
-    try:
-        path = await asyncio.to_thread(download_video, text)
-        video = InputFile(path)
-        await message.answer_video(video)
+    file_path = None
+
+    # إعادة المحاولة الذكية
+    for attempt in range(3):
         try:
-            os.remove(path)
+            file_path = await asyncio.to_thread(download_video, url)
+            if file_path:
+                break
         except Exception:
-            pass
-    except Exception as e:
-        await message.reply("فشل التحميل ❌")
+            await asyncio.sleep(5)
+
+    if file_path and os.path.exists(file_path):
+        try:
+            await message.reply_video(types.FSInputFile(file_path))
+        except:
+            await message.reply_document(types.FSInputFile(file_path))
+
+        os.remove(file_path)
+    else:
+        await message.reply("فشل التحميل ❌ الرابط محمي أو غير مدعوم")
+
+async def main():
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    import logging
-    logging.basicConfig(level=logging.INFO)
-
-    async def main():
-        await dp.start_polling(bot, skip_updates=True)
-
     asyncio.run(main())
